@@ -1,0 +1,19 @@
+references:
+  staridx: /mnt/projects/rpd/genomes.testing/S3_igenomes/Homo_sapiens/Ensembl/GRCh37/Sequence/STARIndex/
+  star_gtf: /mnt/projects/rpd/genomes.testing/S3_igenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.gtf
+  refflat: /mnt/projects/rpd/genomes.testing/S3_igenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/refFlat.txt.gz
+  gtf_bed: /mnt/projects/rpd/genomes.testing/S3_igenomes/Homo_sapiens/Ensembl/GRCh37/Annotation/Genes/genes.bed
+  rsemidx: /mnt/projects/rpd/genomes.testing/S3_igenomes/Homo_sapiens/Ensembl/GRCh37/Sequence/RSEMIndex/transcript
+NUM_ROWS: 40
+samples: 
+  RHB8484:
+    readunits:
+      1355ef65:
+        flowcell_id: ACC7RUACXX
+        fq1: /mnt/projects/rpd/testing/data/rnaseq/encode-data/ENCFF001RDF_NA_NA_R1_001_500K-1.fastq.gz
+        fq2: /mnt/projects/rpd/testing/data/rnaseq/encode-data/ENCFF001RCX_NA_NA_R2_001_500K-1.fastq.gz
+        lane_id: '8'
+        library_id: RHB8484
+        rg_id: HS003-PE-R00279.8
+        run_id: HS003-PE-R002
+
