@@ -392,11 +392,13 @@ process createBigWig {
     input:
     set sample_id, file(log), file (bam_createBigWig), file(ranscriptome_bam) from bam_createBigWig
     output:
-    file "*.bigwig" into bigwig_for_genebody
+    file "*.bw" into bigwig_for_genebody
     script:
     """
     samtools index $bam_createBigWig
-    bamCoverage -b $bam_createBigWig -p ${task.cpus} -o ${sample_id}.bigwig
+    #bamCoverage -b $bam_createBigWig -p ${task.cpus} -o ${sample_id}.bigwig
+    bamCoverage -b $bam_createBigWig -p ${task.cpus} --filterRNAstrand forward -o ${sample_id}_rev.bw
+    bamCoverage -b $bam_createBigWig -p ${task.cpus} --filterRNAstrand reverse -o ${sample_id}_fwd.bw
     """
 }
 
@@ -410,7 +412,7 @@ input:
     set sample_id, file(log), file (bam_rseqc), file(ranscriptome_bam) from bam_rsem
     val (rsemidx)
     output:
-    set sample_id, file("${sample_id}.isoforms.results"), file("${sample_id}.genes.results")into rsem_results
+    set sample_id, file("${sample_id}.isoforms.results"), file("${sample_id}.genes.results"), file("${sample_id}.pdf") into rsem_results
     script:
     if (params.singleEnd) {
       fragment_length_mean_val = fragment_length_mean > 0 ? "--fragment-length-mean ${fragment_length_mean}" : ''
@@ -424,7 +426,7 @@ input:
       st_single_cell_prior = "--single-cell-prior"
     }
     def calc_ci = ''
-    if (calc_ci) {
+    if (params.calc_ci) {
       calc_ci = "--calc-ci --ci-memory ${task.memory.toGiga()}"
     }
     def rnastrandness = ''
@@ -447,6 +449,7 @@ input:
       --seed 12345 \
       ${st_single_cell_prior} \
       ${calc_ci} \
+      --output-genome-bam \
       --sort-bam-by-coordinate \
       --estimate-rspd \
       ${fragment_length_mean_val} ${fragment_length_sd_val} \
