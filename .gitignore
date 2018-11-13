@@ -3,3 +3,5 @@
 results/
 work/
 nohup.out
+.nextflow.log*
+.nextflow/
