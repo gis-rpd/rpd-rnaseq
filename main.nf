@@ -16,25 +16,25 @@ log.info "======================================"
 def helpMessage() {
     log.info"""
     Usage:
-    nextflow main.nf -params-file sample.yaml --publishdir outdir -profile gis 
+    nextflow main.nf -params-file sample.yaml -profile gis]
     -params-file    Sample config file
-    --publishDir    copies the process output files to a specified folder
-    --keep_workdir  Don't delete workdir 
-
-    Options:
     -profile        config for jobs (use 'gis' to submit jobs to Aquila or the jobs will run
                     locally if not specified)
+
+    Options:
+    --publishDir    copies the process output files to a specified folder
+
     --singleEnd     Specifies that the input is single end reads
-    --trimming      Quality and adapter trimming is required by Trimgalore
-    
+
     Trimming options
+    --trimming      Quality and adapter trimming is required by Trimgalore
     --clip_r1 [int]               Instructs Trim Galore to remove bp from the 5' end of read 1 (or single-end reads)
     --clip_r2 [int]               Instructs Trim Galore to remove bp from the 5' end of read 2 (paired-end reads only)
     --three_prime_clip_r1 [int]   Instructs Trim Galore to remove bp from the 3' end of read 1 AFTER adapter/quality trimming has been performed
     --three_prime_clip_r2 [int]   Instructs Trim Galore to remove bp from the 3' end of read 2 AFTER adapter/quality trimming has been performed
     --saveTrimmed                 Save trimmed FastQ file intermediates
 
-    star mapping options
+    STAR mapping options
     --outFilterMultimapNmax       Int Number of multi mapped reads, default is unique (i.e 1)
 
     Rsem options
@@ -86,10 +86,6 @@ if (params.samples == null)
     exit 1, "No samples given"
 log.info "List of samples: " +  params.samples.keySet()
 
-if (params.keep_workdir) {
-   log.warn "Not cleaning up work automatically"
-   cleanup = false
-}
 
 /* Input validation
  * ----------------------------------------------------------------------
@@ -167,7 +163,7 @@ process readunit_merge {
     set sample_id, file(reads) from raw_fastq_ch
   output:
     set sample_id, file("*fastq.gz") into merged_fastq_ch, fastqc_in_ch
-  script:    
+  script:
     if (params.singleEnd) {
       """
       ls ${reads} | grep "_R1_" | sort | xargs cat > ${sample_id}_R1.fastq.gz;
@@ -251,7 +247,7 @@ def check_reads(count){
 //Filter samples with low read counts
 fastq_ch
   .filter { sample_id, count, reads -> check_reads(count) }
-  .into { fastq_input_ch }
+  .set { fastq_input_ch }
 //fastq_input_ch.subscribe { println "$it" }
 
 //Filter STAR aligned bams
@@ -487,10 +483,10 @@ process multiqc {
  * https://www.nextflow.io/docs/latest/metadata.html
  */
 workflow.onComplete {
-    def msg = """\
+ def msg = """\
     Pipeline execution summary
     ---------------------------
-    Status:      : ${ workflow.success ? 'COMPLETED' : 'FAILED' }
+    Status:      : ${ workflow.success ? 'OK' : 'FAILED' }
 
     Started at   : ${workflow.start}
     Completed at : ${workflow.complete}
@@ -501,23 +497,23 @@ workflow.onComplete {
     Project Dir  : ${workflow.projectDir}
     """.stripIndent()
 
-    if (! workflow.success) {    
+    if (! workflow.success) {
        def errmsg = """\
 
        Report for task that caused the workflow execution to fail:
-       Exit status   : ${workflow.exitStatus}
+       Exit status  : ${workflow.exitStatus}
        Error message : ${workflow.errorMessage}
-       Error report  : ${ workflow.errorReport ? workflow.errorReport : '-' }
-       """.stripIndent()
+       Error report : ${ workflow.errorReport ? workflow.errorReport : '-' }
+        """.stripIndent()
 
        msg = msg + errmsg
     }
-    
-    status = workflow.success ? 'completed' : 'failed'
-    sendMail(from: 'rpd@gis.a-star.edu.sg', to: "${params.mail_to}", 
-             subject: "Nextflow execution ${status}: ${workflow_name}", body: msg)
-}
 
+    if (params.mailto != "") {
+        sendMail(to: params.mailto, subject: 'Nextflow execution completed', body: msg)
+    }
+}
 workflow.onError {
     println "Oops... Pipeline execution stopped with the following message: ${workflow.errorMessage}"
 }
+

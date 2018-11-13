@@ -1,0 +1,5 @@
+*un~
+.nextflow.log
+results/
+work/
+nohup.out
