@@ -385,7 +385,7 @@ process rseqc {
 
 process createBigWig {
     tag {"createBigWig for $sample_id"}
-    publishDir "${params.outdir}/bigwig", mode: 'copy'
+    publishDir  "${params.publishdir}/${sample_id}/bigwig", mode: 'copy'
 
     when:
     !params.skip_qc
