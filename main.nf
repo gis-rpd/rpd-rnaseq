@@ -320,7 +320,7 @@ process star {
 // Filter removes all 'aligned' channels that fail the check
 star_aligned
   .filter { sample_id, logs, sorted_bam, ranscriptome_bam -> check_log(logs) }
-  .into { collectRNAMetrice; bam_rseqc; bam_rsem}
+  .into { collectRNAMetrice; bam_rseqc; bam_rsem; bam_createBigWig}
 //collectRNAMetrice.subscribe { println "$it" }
 
 /*
@@ -380,6 +380,30 @@ process rseqc {
 }
 
 /*
+ * Step 6.1 Rseqc create BigWig coverage
+ */
+
+process createBigWig {
+    tag {"createBigWig for $sample_id"}
+    publishDir "${params.outdir}/bigwig", mode: 'copy'
+
+    when:
+    !params.skip_qc
+
+    input:
+    set sample_id, file(log), file (bam_createBigWig), file(ranscriptome_bam) from bam_createBigWig
+
+    output:
+    file "*.bigwig" into bigwig_for_genebody
+
+    script:
+    """
+    samtools index $bam_createBigWig
+    bamCoverage -b $bam_createBigWig -p ${task.cpus} -o ${sample_id}.bigwig
+    """
+}
+
+/*
  * STEP 7 - RSEM analysis
  */ 
 process rsem {
@@ -427,7 +451,8 @@ input:
       --ci-memory 30000 \
       ${fragment_length_mean_val} ${fragment_length_sd_val} \
       ${ranscriptome_bam} \
-      ${rsemidx} ${sample_id}       
+      ${rsemidx} ${sample_id};
+    rsem-plot-model ${sample_id} ${sample_id}.pdf    
     """
 }
 
