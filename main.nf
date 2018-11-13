@@ -25,7 +25,7 @@ def helpMessage() {
     -profile        config for jobs (use 'gis' to submit jobs to Aquila or the jobs will run
                     locally if not specified)
     --singleEnd     Specifies that the input is single end reads
-    --trimming      Trimming is required (Trimgalore step)
+    --trimming      Quality and adapter trimming is required by Trimgalore
     
     Trimming options
     --clip_r1 [int]               Instructs Trim Galore to remove bp from the 5' end of read 1 (or single-end reads)
@@ -41,6 +41,7 @@ def helpMessage() {
     --single_cell_prior
     --fragment_length_mean        Only for SingleEnd reads
     --fragment_length_sd          Only for SingleEnd reads
+    --calc_ci                     Calculate 95% credibility intervals and posterior mean estimates. (Default: off)
 
     Strandedness:
       --forward_stranded            The library is forward stranded
@@ -123,6 +124,7 @@ outFilterMultimapNmax = params.outFilterMultimapNmax
 fragment_length_mean = params.fragment_length_mean
 fragment_length_sd = params.fragment_length_sd
 single_cell_prior = params.single_cell_prior
+calc_ci = params.calc_ci
 forward_stranded = params.forward_stranded
 reverse_stranded = params.reverse_stranded
 unstranded = params.unstranded
@@ -382,20 +384,15 @@ process rseqc {
 /*
  * Step 6.1 Rseqc create BigWig coverage
  */
-
 process createBigWig {
     tag {"createBigWig for $sample_id"}
     publishDir  "${params.publishdir}/${sample_id}/bigwig", mode: 'copy'
-
     when:
     !params.skip_qc
-
     input:
     set sample_id, file(log), file (bam_createBigWig), file(ranscriptome_bam) from bam_createBigWig
-
     output:
     file "*.bigwig" into bigwig_for_genebody
-
     script:
     """
     samtools index $bam_createBigWig
@@ -425,7 +422,11 @@ input:
     def st_single_cell_prior = ''
     if (single_cell_prior) {
       st_single_cell_prior = "--single-cell-prior"
-    } 
+    }
+    def calc_ci = ''
+    if (calc_ci) {
+      calc_ci = "--calc-ci --ci-memory ${task.memory.toGiga()}"
+    }
     def rnastrandness = ''
     if (forward_stranded && !unstranded){
         rnastrandness = '--strandedness forward'
@@ -445,10 +446,9 @@ input:
       --append-names \
       --seed 12345 \
       ${st_single_cell_prior} \
-      --calc-ci \
+      ${calc_ci} \
       --sort-bam-by-coordinate \
       --estimate-rspd \
-      --ci-memory 30000 \
       ${fragment_length_mean_val} ${fragment_length_sd_val} \
       ${ranscriptome_bam} \
       ${rsemidx} ${sample_id};
