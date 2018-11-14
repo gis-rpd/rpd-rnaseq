@@ -8,7 +8,7 @@ To start using the gis-rpd/rpd-rnaseq pipeline, there are three steps described 
 
 ## 1) Install NextFlow
 
-Nextflow is available on GIS' aquila.
+Nextflow is available on GIS' aquila through RPD's module setup. Contact RPD for more info.
 
 Should you need to install it anyway, run the following commands:
 

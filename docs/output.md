@@ -10,6 +10,8 @@ assumed below).
 Many results (FastQC, STAR alignment stats, RSeQC results) are summarised in MultiQC plots, which
 can be found in `results/MultiQC/multiqc_report.html`
 
+An [example file can be found here](multiqc_report.example.html)
+
 ### Pipeline info
 
 All pipeline internal info (timings etc.) are written to `results/pipeline_info/`. Most of this will not be

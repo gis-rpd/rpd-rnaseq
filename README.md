@@ -28,7 +28,6 @@ pipeline itself was based on the [GIS STAR-RSEM pipeline
 | RNASeq QC                                           | RSeQC                               |
 | Gene and isoform expression                         | RSEM                                |
 | QC report                                           | MultiQC                             |
-|-----------------------------------------------------|-------------------------------------|
 
 
 # Documentation
@@ -41,11 +40,5 @@ Documentation about the pipeline can be found in the `docs/` directory:
 3. [Output and results](docs/output.md)
 
 
-# TODO
-
-See also official issue list
-
-- CI test
-- Test AWS Batch setup
 
 

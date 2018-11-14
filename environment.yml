@@ -1,4 +1,4 @@
-name: fluidigm-c1-rnaseq-dev
+name: rpd-rnaseq-dev
 channels:
   - bioconda
   - conda-forge
