@@ -124,6 +124,8 @@ calc_ci = params.calc_ci
 forward_stranded = params.forward_stranded
 reverse_stranded = params.reverse_stranded
 unstranded = params.unstranded
+params.multiqc_config = "$baseDir/assets/multiqc_config.yaml"
+multiqc_config = file(params.multiqc_config)
 
 /* Channel setup
  * ----------------------------------------------------------------------
@@ -162,7 +164,7 @@ process readunit_merge {
   input:
     set sample_id, file(reads) from raw_fastq_ch
   output:
-    set sample_id, file("*fastq.gz") into merged_fastq_ch, fastqc_in_ch
+    set sample_id, file("*fastq.gz") into merged_fastq_ch, fastqc_ch
   script:
     if (params.singleEnd) {
       """
@@ -178,14 +180,35 @@ process readunit_merge {
 }
 
 /*
- * STEP 2 - Trim Galore!
+ * STEP 2.a - FastQC
+ */
+process fastqc {
+    tag {"FastQC for $sample_id"}
+    publishDir "${params.publishdir}/fastqc", mode: 'copy',
+        saveAs: {filename -> filename.indexOf(".zip") > 0 ? "zips/$filename" : "$filename"}
+    input:
+    set sample_id, file(reads) from fastqc_ch 
+    output:
+    set sample_id, file("*_fastqc.{zip,html}") into fastqc_results
+    set sample_id, file("fq.gz_count"), file(reads) into fastqc_out_ch
+    script:
+    """
+    fastqc -q $reads
+    count=\$(zcat *R1.fastq.gz | wc -l);
+    touch fq.gz_count
+    echo \${count} >> fq.gz_count
+    """
+}
+
+/*
+ * STEP 2.b - Trim Galore (Optional)
  */
 if(params.trimming) {
   process trim_galore {
-    tag {"Trimgalore from $sample_id"}
+    tag {"Trimgalore for $sample_id"}
     publishDir "${params.publishdir}/${sample_id}/trimgalore", mode: 'copy',
     saveAs: {filename ->
-              if (filename.indexOf("_fastqc") > 0) "FastQC/$filename"
+              if (filename.indexOf("fastqc.zip") > 0) "fastqc/$filename"
               else if (filename.indexOf("trimming_report.txt") > 0) "logs/$filename"
               else if (params.saveTrimmed) filename
               else null
@@ -193,9 +216,9 @@ if(params.trimming) {
     input:
       set sample_id, file(reads) from merged_fastq_ch  
     output:
-      set sample_id, file("fq.gz_count"), file("*fq.gz") into fastq_ch
-      //set sample_id, file("*trimming_report.txt") into trimgalore_results
-      set sample_id, file("*") into fastqc_reports
+      set sample_id, file("fq.gz_count"), file("*fq.gz") into trim_fastq
+      file "*trimming_report.txt" into trim_fastqc_results
+      file "*_fastqc.{zip,html}" into trim_fastqc
     script:
       c_r1 = clip_r1 > 0 ? "--clip_r1 ${clip_r1}" : ''
       c_r2 = clip_r2 > 0 ? "--clip_r2 ${clip_r2}" : ''
@@ -217,23 +240,7 @@ if(params.trimming) {
         """
       }
   }
-} else {
-  process check_fastq_input {
-    tag {"checking input fastq from $sample_id"}   
-    input:
-      set sample_id, file(reads) from merged_fastq_ch  
-    output:
-      set sample_id, file("fq.gz_count"), file(reads) into fastq_ch
-      set sample_id, file("*") into fastqc_reports
-    script:
-        """
-        fastqc -q $reads
-        count=\$(zcat *R1.fastq.gz | wc -l);
-        touch fq.gz_count
-        echo \${count} >> fq.gz_count
-        """
-  }
-}
+} 
 
 def check_reads(count){
   def read_count = 0;
@@ -245,10 +252,17 @@ def check_reads(count){
     }
 }
 //Filter samples with low read counts
-fastq_ch
-  .filter { sample_id, count, reads -> check_reads(count) }
-  .set { fastq_input_ch }
-//fastq_input_ch.subscribe { println "$it" }
+if(params.trimming){
+  trim_fastq
+    .filter { sample_id, count, reads -> check_reads(count) }
+    .set { fastq_input_ch }
+    //fastq_input_ch.subscribe { println "$it" }
+} else {
+  fastqc_out_ch
+    .filter { sample_id, count, reads -> check_reads(count) }
+    .set { fastq_input_ch }
+    //fastq_input_ch.subscribe { println "$it" }
+}
 
 //Filter STAR aligned bams
 skipped_poor_alignment = []
@@ -274,7 +288,7 @@ def check_log(logs) {
  * STEP 3 - Star mapping
  */
 process star {
-    tag {"star mapping for from $sample_id"}
+    tag {"star mapping for $sample_id"}
     publishDir "${params.publishdir}/${sample_id}/STAR", mode: 'copy'
     input:
       set sample_id, file(count), file(reads) from fastq_input_ch
@@ -310,29 +324,36 @@ process star {
           --alignIntronMax 1000000 \\
           --alignMatesGapMax 1000000 \\
           --limitBAMsortRAM 2001634664 \\
-          --sjdbScore 1 \\
           --outWigType bedGraph \\
           --outFileNamePrefix ${sample_id}_ \\
       """
 }
 // Filter removes all 'aligned' channels that fail the check
 star_aligned
-  .filter { sample_id, logs, sorted_bam, ranscriptome_bam -> check_log(logs) }
-  .into { collectRNAMetrice; bam_rseqc; bam_rsem; bam_createBigWig}
+  .filter { sample_id, logs, sorted_bam, transcriptome_bam -> check_log(logs) }
+  .into { collectRnaSeqMetrics; bam_rseqc; bam_rsem; bam_createBigWig}
 //collectRNAMetrice.subscribe { println "$it" }
 
 /*
  * STEP 5 - picard collectRnaSeqMetrics analysis
- */ 
+ */
 process collectRnaSeqMetrics {
-  tag {"picard collectRNAMetrice for from $sample_id"}
+  tag {"picard collectRnaSeqMetrics for $sample_id"}
   publishDir "${params.publishdir}/${sample_id}/RnaSeqMetrics", mode: 'copy'
   input:
-    set sample_id, file(log), file (sorted_bam), file(ranscriptome_bam) from collectRNAMetrice
+    set sample_id, file(log), file (sorted_bam), file(transcriptome_bam) from collectRnaSeqMetrics
     file (refflat)
   output:
     set sample_id, file("${sample_id}_RNA_Metrics.txt") into picard_metrics
   script:
+    def arg = ''
+    if ( params.singleEnd || params.forward_stranded ) {
+      arg = 'STRAND_SPECIFICITY=FIRST_READ_TRANSCRIPTION_STRAND'
+    } else if (params.unstranded){
+      arg = 'STRAND_SPECIFICITY=NONE'
+    } else if (params.reverse_stranded) {
+      arg = 'STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND'
+    }
     """
     picard -Dsamjdk.compression_level=2  -XX:-UseGCOverheadLimit -Xms4000m -Xmx${task.memory.toGiga()}G \
       -XX:ConcGCThreads=${task.cpus} -XX:+UseConcMarkSweepGC -XX:ParallelGCThreads=${task.cpus} \
@@ -340,6 +361,7 @@ process collectRnaSeqMetrics {
       I=${sorted_bam} \
       O=${sample_id}_RNA_Metrics.txt \
       REF_FLAT=${refflat} \
+      ${arg} \
       STRAND=SECOND_READ_TRANSCRIPTION_STRAND \
     """
 }
@@ -348,13 +370,15 @@ process collectRnaSeqMetrics {
  * STEP 6 - RSeQC analysis
  */ 
 process rseqc {
-  tag {"rseqc for from $sample_id"}
+  tag {"rseqc for $sample_id"}
   publishDir "${params.publishdir}/${sample_id}/rseqc", mode: 'copy',
   saveAs: {filename ->
             if (filename.indexOf("bam_stat.txt") > 0)    "bam_stat/$filename"
             else if (filename.indexOf("_distribution.txt") > 0)     "read_distribution/$filename"
             else if (filename.indexOf("read_duplication.pos.DupRate.xls") > 0)  "read_duplication/dup_pos/$filename"
             else if (filename.indexOf("read_duplication.seq.DupRate.xls") > 0)  "read_duplication/dup_seq/$filename"
+            else if (filename.indexOf("duplication.DupRate_plot.pdf") > 0)  "read_duplication/dup_seq/$filename"
+            else if (filename.indexOf("duplication.DupRate_plot.r") > 0)  "read_duplication/$filename"
             else filename
         }
   input:
@@ -366,12 +390,12 @@ process rseqc {
     ! params.skip_qc
   script:
     """
-    samtools index $bam_rseqc
     #infer_experiment.py -i $bam_rseqc -r $gtf_bed > ${bam_rseqc.baseName}.infer_experiment.txt
-    #junction_annotation.py -i $bam_rseqc -o ${bam_rseqc.baseName}.rseqc -r $gtf_bed
-    bam_stat.py -i $bam_rseqc 2> ${bam_rseqc.baseName}.bam_stat.txt
+    #junction_annotation.py -i $bam_rseqc -o ${bam_rseqc.baseName}.rseqc -r $gtf_bed    
     #junction_saturation.py -i $bam_rseqc -o ${bam_rseqc.baseName}.rseqc -r $gtf_bed 2> ${bam_rseqc.baseName}.junction_annotation_log.txt
     #inner_distance.py -i $bam_rseqc -o ${bam_rseqc.baseName}.rseqc -r $gtf_bed
+    bam_stat.py -i $bam_rseqc 2> ${bam_rseqc.baseName}.bam_stat.txt
+    samtools index $bam_rseqc
     read_distribution.py -i $bam_rseqc -r $gtf_bed > ${bam_rseqc.baseName}.read_distribution.txt
     read_duplication.py -i $bam_rseqc -o ${bam_rseqc.baseName}.read_duplication
     """
@@ -401,14 +425,15 @@ process createBigWig {
 /*
  * STEP 7 - RSEM analysis
  */ 
+//Illumina TruSeq Stranded protocols, please use 'reverse'
 process rsem {
-  tag {"rsem for from $sample_id"}
+  tag {"rsem for $sample_id"}
   publishDir "${params.publishdir}/${sample_id}/rsem", mode: 'copy'
 input:
     set sample_id, file(log), file (bam_rseqc), file(ranscriptome_bam) from bam_rsem
     val (rsemidx)
     output:
-    set sample_id, file("${sample_id}.isoforms.results"), file("${sample_id}.genes.results"), file("${sample_id}.pdf") into rsem_results
+    set sample_id, file("${sample_id}.isoforms.results"), file("${sample_id}.genes.results"), file("${sample_id}.pdf"), file("${sample_id}.stat") into rsem_results
     script:
     if (params.singleEnd) {
       fragment_length_mean_val = fragment_length_mean > 0 ? "--fragment-length-mean ${fragment_length_mean}" : ''
@@ -455,26 +480,35 @@ input:
     """
 }
 
-fastqc_ch_test = fastqc_reports
-     .flatten()
-     .filter{  it.toString().endsWith("fastqc.zip") || it.toString().endsWith("report.txt")}       
+if ( params.trimming ) {
+  fastqc_ch_test = trim_fastqc_results.concat(fastqc_results)
+       .flatten()
+       .filter{ it.toString().endsWith("fastqc.zip") || it.toString().endsWith("fastqc.html") || it.toString().endsWith("report.txt")}
+} else {
+  fastqc_ch_test = fastqc_results
+       .flatten()
+       .filter{ it.toString().endsWith("fastqc.zip") || it.toString().endsWith("fastqc.html") }  
+}       
 
 /*
  * STEP 8 - MultiQC analysis
  */
 process multiqc {
-  tag "Running MultiQC for sample $sample_id"
+  tag "Running MultiQC for sample"
   publishDir "${params.publishdir}/MultiQC", mode: 'copy'
   input:
-    file ('*') from fastqc_ch_test.toList()
-    file ('alignment/*') from alignment_logs.collect()
+    file multiqc_config
+    file ('fastqc/*') from fastqc_ch_test.toList()
+    file ('alignment/*') from alignment_logs.collect().ifEmpty([])
     file ('rseqc/*') from rseqc_results.collect().ifEmpty([])
+    file ('rsem/*') from rsem_results.collect().ifEmpty([])
+    file('RnaSeqMetrics/*RNA_Metrics.txt') from picard_metrics
   output:
     file '*multiqc_report.html' into multiqc_report
     file '*_data' into multiqc_data
   script:
   """
-  multiqc . -m rseqc  -m star -m cutadapt -m fastqc
+  multiqc . -m rseqc  -m star -m cutadapt -m fastqc -m rsem -m picard -m rsem --config $multiqc_config
   """
 }
 
@@ -509,8 +543,8 @@ workflow.onComplete {
        msg = msg + errmsg
     }
 
-    if (params.mailto != "") {
-        sendMail(to: params.mailto, subject: 'Nextflow execution completed', body: msg)
+    if (params.mail_to) {
+        sendMail(to: params.mail_to, subject: 'Nextflow execution completed', body: msg)
     }
 }
 workflow.onError {
