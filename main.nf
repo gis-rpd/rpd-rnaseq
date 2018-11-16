@@ -185,7 +185,10 @@ process readunit_merge {
 process fastqc {
     tag {"FastQC for $sample_id"}
     publishDir "${params.publishdir}/fastqc", mode: 'copy',
-        saveAs: {filename -> filename.indexOf(".zip") > 0 ? "zips/$filename" : "$filename"}
+    saveAs: {filename ->
+              if (filename.indexOf("fastqc.{zip,html}") > 0) "$filename"
+              else null
+        }
     input:
     set sample_id, file(reads) from fastqc_ch 
     output:
@@ -206,7 +209,7 @@ process fastqc {
 if(params.trimming) {
   process trim_galore {
     tag {"Trimgalore for $sample_id"}
-    publishDir "${params.publishdir}/${sample_id}/trimgalore", mode: 'copy',
+    publishDir "${params.publishdir}/trimgalore", mode: 'copy',
     saveAs: {filename ->
               if (filename.indexOf("fastqc.zip") > 0) "fastqc/$filename"
               else if (filename.indexOf("trimming_report.txt") > 0) "logs/$filename"
@@ -289,7 +292,17 @@ def check_log(logs) {
  */
 process star {
     tag {"star mapping for $sample_id"}
-    publishDir "${params.publishdir}/${sample_id}/STAR", mode: 'copy'
+    publishDir "${params.publishdir}/STAR", mode: 'copy',
+    saveAs: {filename ->
+              if (filename.indexOf("out.bam") > 0) "bam/$filename"
+              else if (filename.indexOf("out.bg") > 0) "bam/$filename"
+              else if (filename.indexOf("ReadsPerGene.out.tab") > 0) "count/$filename"
+              else if (filename.indexOf("Log.final.out") > 0) "logs/$filename"
+              else if (filename.indexOf("SJ.out.tab") > 0) "logs/$filename"
+              else if (filename.indexOf("Log.out") > 0) "logs/$filename"
+              else if (filename.indexOf("Log.progress.out") > 0) "logs/$filename"
+              else null
+          }
     input:
       set sample_id, file(count), file(reads) from fastq_input_ch
       file (ref_staridx)
@@ -301,6 +314,7 @@ process star {
       file "*Log.out" into star_log
       file "*ReadsPerGene.out.tab"
       file "*Unique.str*.out.bg"
+      file "*Log.progress.out"
     script:
     outFilterMultimapNmax_val = outFilterMultimapNmax > 0 ? "--outFilterMultimapNmax ${outFilterMultimapNmax}" : ' --outFilterMultimapNmax 1'
       """
@@ -339,7 +353,7 @@ star_aligned
  */
 process collectRnaSeqMetrics {
   tag {"picard collectRnaSeqMetrics for $sample_id"}
-  publishDir "${params.publishdir}/${sample_id}/RnaSeqMetrics", mode: 'copy'
+  publishDir "${params.publishdir}/RnaSeqMetrics", mode: 'copy'
   input:
     set sample_id, file(log), file (sorted_bam), file(transcriptome_bam) from collectRnaSeqMetrics
     file (refflat)
@@ -374,12 +388,12 @@ process rseqc {
   publishDir "${params.publishdir}/${sample_id}/rseqc", mode: 'copy',
   saveAs: {filename ->
             if (filename.indexOf("bam_stat.txt") > 0)    "bam_stat/$filename"
-            else if (filename.indexOf("_distribution.txt") > 0)     "read_distribution/$filename"
+            else if (filename.indexOf("_distribution.txt") > 0)  "read_distribution/$filename"
             else if (filename.indexOf("read_duplication.pos.DupRate.xls") > 0)  "read_duplication/dup_pos/$filename"
             else if (filename.indexOf("read_duplication.seq.DupRate.xls") > 0)  "read_duplication/dup_seq/$filename"
-            else if (filename.indexOf("duplication.DupRate_plot.pdf") > 0)  "read_duplication/dup_seq/$filename"
-            else if (filename.indexOf("duplication.DupRate_plot.r") > 0)  "read_duplication/$filename"
-            else filename
+            else if (filename.indexOf("plot.pdf") > 0)  "$filename"
+            else if (filename.indexOf("duplication.DupRate_plot.r") > 0)  "read_duplication/rscripts/$filename"
+            else null
         }
   input:
     set sample_id, file(log), file (bam_rseqc), file(ranscriptome_bam) from bam_rseqc
@@ -406,7 +420,7 @@ process rseqc {
  */
 process createBigWig {
     tag {"createBigWig for $sample_id"}
-    publishDir  "${params.publishdir}/${sample_id}/bigwig", mode: 'copy'
+    publishDir  "${params.publishdir}/bigwig", mode: 'copy'
     when:
     !params.skip_qc
     input:
@@ -428,7 +442,7 @@ process createBigWig {
 //Illumina TruSeq Stranded protocols, please use 'reverse'
 process rsem {
   tag {"rsem for $sample_id"}
-  publishDir "${params.publishdir}/${sample_id}/rsem", mode: 'copy'
+  publishDir "${params.publishdir}/rsem", mode: 'copy'
 input:
     set sample_id, file(log), file (bam_rseqc), file(ranscriptome_bam) from bam_rsem
     val (rsemidx)
