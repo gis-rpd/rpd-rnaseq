@@ -111,7 +111,7 @@ The plot include fragment length distribution, mate length distribution, read st
 
 ![RSEM](images/rsem_plot.png)
 
-RSEM documentation: [rsem-calculate-expression](https://deweylab.github.io/RSEM/rsem-calculate-expression.html) [rsem-plot-model] (https://github.com/deweylab/RSEM)
+RSEM documentation: [rsem-calculate-expression](https://deweylab.github.io/RSEM/rsem-calculate-expression.html)[rsem-plot-model] (https://github.com/deweylab/RSEM)
 
 **Output directory: `results/rsem`**
 
@@ -208,7 +208,7 @@ RSeQC documentation: [read_distribution.py](http://rseqc.sourceforge.net/#read-d
 
 ## deepTools
 
-###bamCoverage
+### bamCoverage
 This tool takes an alignment of reads from star as input (BAM file) and generates a coverage track (bigWig) as output. Genomic-coordinate files can be visualized by both UCSC Genome browser and Broad Institute's Integrative Genomics Viewer (IGV). Transcript-coordinate files can be visualized by IGV.
 
 It generate two independent bigWig files for all reads on the forward and reverse strand, respectively.
