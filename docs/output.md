@@ -8,8 +8,8 @@ This pipelines processes data using the following steps:
 * [FastQC](#fastqc) - read quality control
 * [TrimGalore](#trimgalore) - adapter trimming
 * [STAR](#star) - alignment
-* [RSEM] (#rsem-calculate-expression) - Estimate gene and isoform expression from RNA-Seq data
-* [Picard CollectRnaSeqMetrics] - RNA alignment metrics for a BAM file
+* [RSEM](#rsem-calculate-expression) - Estimate gene and isoform expression from RNA-Seq data
+* [Picard CollectRnaSeqMetrics](#picard-collectrnaseqmetrics)- RNA alignment metrics for a BAM file
 * [RSeQC](#rseqc) - RNA quality control metrics
    - [BAM stat](#bam-stat)
    - [Read duplication](#read-duplication)
@@ -31,6 +31,20 @@ of interest to the average user.
 Results per sample can be found in the respectively named folders. If one of your samples is called
 `ABC`, then you will find a folder called `results/ABC`, with all the following subfolders.
 
+The MultiQC plots are a good starting point to explore your results.
+
+
+## MultiQC
+[MultiQC](http://multiqc.info) is a visualisation tool that generates a single HTML report summarising all samples in your project. Most of the pipeline QC results are visualised in the report and further statistics are available in within the report data directory.
+
+**Output directory: `results/multiqc`**
+
+* `Project_multiqc_report.html`
+  * MultiQC report - a standalone HTML file that can be viewed in your web browser
+* `Project_multiqc_data/`
+  * Directory containing parsed statistics from the different tools used in the pipeline
+
+For more information about how to use MultiQC reports, see http://multiqc.info
 
 
 ## FastQC
@@ -207,14 +221,3 @@ It generate two independent bigWig files for all reads on the forward and revers
 deepTools documentation: [bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html)
 
 
-## MultiQC
-[MultiQC](http://multiqc.info) is a visualisation tool that generates a single HTML report summarising all samples in your project. Most of the pipeline QC results are visualised in the report and further statistics are available in within the report data directory.
-
-**Output directory: `results/multiqc`**
-
-* `Project_multiqc_report.html`
-  * MultiQC report - a standalone HTML file that can be viewed in your web browser
-* `Project_multiqc_data/`
-  * Directory containing parsed statistics from the different tools used in the pipeline
-
-For more information about how to use MultiQC reports, see http://multiqc.info

@@ -8,13 +8,14 @@ Singapore (GIS)](https://a-star.edu.sg/gis) based on a request by the Cancer The
 Oncology 6.
 
 The pipeline is built using [Nextflow](https://www.nextflow.io), a workflow tool to run tasks across
-multiple compute infrastructures in a very portable manner. It further comes with Conda, eocker and
-Singularity support, making software installation easy and results reproducible. The implementation
-tries to stay in line with [nf-core](https://nf-co.re/) practices and recommendations. The
-pipeline itself was based on the [GIS STAR-RSEM pipeline
-(2017-10)](https://github.com/gis-rpd/pipelines/blob/2017-10/rnaseq/star-rsem/README.md) and
-[nf-core/rnaseq](https://github.com/nf-core/rnaseq) 
+multiple compute infrastructures in a very portable manner. It further comes with Conda, Docker and
+Singularity support, making software installation easy and results reproducible. 
 
+The
+pipeline itself is mostly based on the [GIS STAR-RSEM pipeline
+(2017-10)](https://github.com/gis-rpd/pipelines/blob/2017-10/rnaseq/star-rsem/README.md) and
+[nf-core/rnaseq](https://github.com/nf-core/rnaseq). The implementation
+tries to stay in line with [nf-core](https://nf-co.re/) practices and recommendations.
 
 
 ### Pipeline Steps
