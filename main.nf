@@ -46,7 +46,6 @@ def helpMessage() {
     Strandedness:
       --forward_stranded            The library is forward stranded
       --reverse_stranded            The library is reverse stranded
-      --unstranded                  The default behaviour
 
     QC options:
     --skip_qc                     Skip all QC steps aside from MultiQC
@@ -123,7 +122,6 @@ single_cell_prior = params.single_cell_prior
 calc_ci = params.calc_ci
 forward_stranded = params.forward_stranded
 reverse_stranded = params.reverse_stranded
-unstranded = params.unstranded
 params.multiqc_config = "$baseDir/assets/multiqc_config.yaml"
 multiqc_config = file(params.multiqc_config)
 
@@ -361,12 +359,12 @@ process collectRnaSeqMetrics {
     set sample_id, file("${sample_id}_RNA_Metrics.txt") into picard_metrics
   script:
     def arg = ''
-    if ( params.singleEnd || params.forward_stranded ) {
+    if ( params.singleEnd || forward_stranded ) {
       arg = 'STRAND_SPECIFICITY=FIRST_READ_TRANSCRIPTION_STRAND'
-    } else if (params.unstranded){
-      arg = 'STRAND_SPECIFICITY=NONE'
-    } else if (params.reverse_stranded) {
+    } else if (reverse_stranded) {
       arg = 'STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND'
+    } else {
+      arg = 'STRAND_SPECIFICITY=NONE'
     }
     """
     picard -Dsamjdk.compression_level=2  -XX:-UseGCOverheadLimit -Xms4000m -Xmx${task.memory.toGiga()}G \
@@ -384,7 +382,7 @@ process collectRnaSeqMetrics {
  */ 
 process rseqc {
   tag {"rseqc for $sample_id"}
-  publishDir "${params.publishdir}/${sample_id}/rseqc", mode: 'copy',
+  publishDir "${params.publishdir}/rseqc", mode: 'copy',
   saveAs: {filename ->
             if (filename.indexOf("bam_stat.txt") > 0)    "bam_stat/$filename"
             else if (filename.indexOf("_distribution.txt") > 0)  "read_distribution/$filename"
@@ -464,14 +462,14 @@ input:
       calc_ci = "--calc-ci --ci-memory ${task.memory.toGiga()}"
     }
     def rnastrandness = ''
-    if (forward_stranded && !unstranded){
+    if (forward_stranded) {
         rnastrandness = '--strandedness forward'
-    } else if (reverse_stranded && !unstranded){
+    } else if (reverse_stranded) {
         rnastrandness = '--strandedness reverse'
     }
     def pairedend = ''
     if ( !params.singleEnd ) {
-        pairedend = '--paired-end' 
+        pairedend = '--paired-end'
     }
     """
     rsem-calculate-expression \

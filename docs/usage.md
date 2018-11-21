@@ -126,7 +126,6 @@ Three command line flags / config parameters set the library strandedness for a 
 
 * `--forward_stranded`
 * `--reverse_stranded`
-* `--unstranded`
 
 If not set, the pipeline will be run as unstranded.
 
@@ -135,12 +134,12 @@ These flags affect the commands used in some stages of the pipeline
 These flags affect the commands used for several steps in the pipeline:
 
 RSEM:
-- `--unstranded`: NA
+- unstranded: NA
 - `--forward_stranded`: `--strandedness forward`
 - `--reverse_stranded`: `--strandedness reverse` (Illumina TruSeq Stranded protocols)
 
 Picard collectRnaSeqMetrics:
-- `--unstranded`: `STRAND_SPECIFICITY=NONE`
+- unstranded: `STRAND_SPECIFICITY=NONE`
 - `--forward_stranded` or `--singleend`: `STRAND_SPECIFICITY=FIRST_READ_TRANSCRIPTION_STRAND`
 - `--reverse_stranded`: `STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND`
 
