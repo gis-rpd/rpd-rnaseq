@@ -118,7 +118,7 @@ samples:
 So you can specify multiple samples and each samples can contain multiple fastq pairs (AKA readunits)
 
 ### `--singleEnd`
-By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--singleEnd` on the command line when you launch the pipeline. A normal glob pattern, enclosed in quotation marks, can then be used for `--reads`. For example:
+By default, the pipeline expects paired-end data. If you have single-end data, you need to specify `--singleEnd` on the command line when you launch the pipeline. A normal glob pattern, enclosed in quotation marks, can then be used for `--reads`.
 
 
 ### Library strandedness
@@ -140,7 +140,7 @@ RSEM:
 - `--reverse_stranded`: `--strandedness reverse` (Illumina TruSeq Stranded protocols)
 
 Picard collectRnaSeqMetrics:
-- `--unstranded`: STRAND_SPECIFICITY=NONE`
+- `--unstranded`: `STRAND_SPECIFICITY=NONE`
 - `--forward_stranded` or `--singleend`: `STRAND_SPECIFICITY=FIRST_READ_TRANSCRIPTION_STRAND`
 - `--reverse_stranded`: `STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND`
 

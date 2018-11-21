@@ -375,8 +375,7 @@ process collectRnaSeqMetrics {
       I=${sorted_bam} \
       O=${sample_id}_RNA_Metrics.txt \
       REF_FLAT=${refflat} \
-      ${arg} \
-      STRAND=SECOND_READ_TRANSCRIPTION_STRAND \
+      ${arg}
     """
 }
 
