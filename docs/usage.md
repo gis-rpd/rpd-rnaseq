@@ -128,19 +128,23 @@ Three command line flags / config parameters set the library strandedness for a 
 * `--reverse_stranded`
 * `--unstranded`
 
-If not set, the pipeline will be run as unstranded. Specifying `--pico` makes the pipeline run in `forward_stranded` mode.
-
-You can set a default in a custom Nextflow configuration file such as one saved in `~/.nextflow/config` (see the [nextflow docs](https://www.nextflow.io/docs/latest/config.html) for more). For example:
-
-```groovy
-params {
-    reverse_stranded = true
-}
-```
-
-If you have a default strandedness set in your personal config file you can use `--unstranded` to overwrite it for a given run.
+If not set, the pipeline will be run as unstranded.
 
 These flags affect the commands used in some stages of the pipeline
+
+These flags affect the commands used for several steps in the pipeline:
+
+RSEM:
+- `--unstranded`: NA
+- `--forward_stranded`: `--strandedness forward`
+- `--reverse_stranded`: `--strandedness reverse` (Illumina TruSeq Stranded protocols)
+
+Picard collectRnaSeqMetrics:
+- `--unstranded`: STRAND_SPECIFICITY=NONE`
+- `--forward_stranded` or `--singleend`: `STRAND_SPECIFICITY=FIRST_READ_TRANSCRIPTION_STRAND`
+- `--reverse_stranded`: `STRAND_SPECIFICITY=SECOND_READ_TRANSCRIPTION_STRAND`
+
+
 
 ### `--saveTrimmed`
 By default, trimmed FastQ files will not be saved to the results directory. Specify this
