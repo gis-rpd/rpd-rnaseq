@@ -1,4 +1,4 @@
-name: rpd-rnaseq-dev
+name: rpd-rnaseq-1.0
 channels:
   - bioconda
   - conda-forge
