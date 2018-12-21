@@ -5,3 +5,5 @@ work/
 nohup.out
 .nextflow.log*
 .nextflow/
+*.swp
+
